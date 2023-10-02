@@ -1,5 +1,4 @@
 import json
-import os
 
 import grid2op
 import numpy as np
@@ -52,6 +51,19 @@ def test_grid2op_action_dump_to_grid2elia(sandbox_action_dump_file: str) -> None
     assert not np.all(dump.exclusion_mask)
     # The exclusion mask is symmetric
     assert np.all(dump.exclusion_mask == dump.exclusion_mask.T)
+
+    with open(sandbox_action_dump_file, "r") as f:
+        dump_file_contents = json.load(f)
+
+    assert dump.actions.n_envs == len(dump_file_contents)
+    assert dump.actions.new_line_state.shape[1] > 0
+    assert dump.actions.new_topo_vect.shape[1] > 0
+
+    for idx, act_dict in enumerate(dump_file_contents):
+        g2o_act = env.action_space(act_dict)
+        elia_act = dump.actions[np.array([idx])]
+        elia_act_ref = pad_out_like(grid2op_action_to_grid2elia(g2o_act, env), elia_act)
+        assert elia_act == elia_act_ref
 
 
 @given(action=st.integers(min_value=0))
@@ -223,22 +235,3 @@ def test_grid2op_action_to_grid2elia_set_line_status(action: int) -> None:
                     assert elia_act.new_trafo_state.new_state[0, idx] == (
                         line_state == 1
                     )
-
-    dump_file = os.path.join(
-        os.path.dirname(__file__), "..", "..", "action_dumps", "sandbox", "all.json"
-    )
-    env = grid2op.make("l2rpn_case14_sandbox")
-    dump = grid2op_action_dump_to_grid2elia(dump_file, env)
-
-    with open(dump_file, "r") as f:
-        dump_file_contents = json.load(f)
-
-    assert dump.actions.n_envs == len(dump_file_contents)
-    assert dump.actions.new_line_state.shape[1] > 0
-    assert dump.actions.new_topo_vect.shape[1] > 0
-
-    for idx, act_dict in enumerate(dump_file_contents):
-        g2o_act = env.action_space(act_dict)
-        elia_act = dump.actions[np.array([idx])]
-        elia_act_ref = pad_out_like(grid2op_action_to_grid2elia(g2o_act, env), elia_act)
-        assert elia_act == elia_act_ref

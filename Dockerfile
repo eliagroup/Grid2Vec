@@ -4,7 +4,7 @@ FROM python:3.11.4-bullseye
 ENV PATH="/root/.local/bin:$PATH"
 
 # Install Poetry
-RUN apt-get -qq update && apt-get -qq -y install curl\
+RUN apt-get -qq update && apt-get -qq -y install curl vim\
     && curl -sSL https://install.python-poetry.org | python3 - \
     && poetry config virtualenvs.create false \
     && apt-get -qq -y remove curl \
