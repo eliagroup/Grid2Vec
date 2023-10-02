@@ -142,3 +142,5 @@ cython_debug/
 *amltmp
 
 .DS_Store
+
+test_data

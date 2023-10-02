@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ai-coe-mlops-githubcodespaces"
+name = "grid2vec"
 version = "0.1.0"
 description = "GitHub Codespaces template"
 authors = ["AI Center of Excellence"]
@@ -8,6 +8,12 @@ authors = ["AI Center of Excellence"]
 python = "3.11.*"
 rich = "^13.3.4"
 pydantic = "^1.10.7"
+jax = "^0.4.16"
+chex = "^0.1.83"
+pandapower = "^2.13.1"
+grid2op = "^1.9.5"
+jax-dataclasses = "^1.5.1"
+gymnasium = "^0.29.1"
 
 [tool.poetry.group.dev]
 optional = true
@@ -17,6 +23,9 @@ pre-commit = "^2.21.0"
 pytest = "^7.3.1"
 pytest-cov = "^4.0.0"
 ipykernel = "^6.25.0"
+mypy = "^1.5.1"
+hypothesis = "^6.87.1"
+pandas-stubs = "^2.1.1.230928"
 
 [build-system]
 requires = ["poetry-core"]
