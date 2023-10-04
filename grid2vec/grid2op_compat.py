@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import pandas as pd
 from grid2op.Action import BaseAction
+from grid2op.Converter import IdToAct
 from grid2op.Environment import BaseEnv
 from grid2op.MakeEnv.PathUtils import DEFAULT_PATH_DATA
 from jax_dataclasses import replace
@@ -31,7 +32,8 @@ def load_grid_grid2op(
 
     Args:
         env_name (str): The grid2op environment name
-        include_chronic_indices (Optional[List[int]], optional): Which chronics to include.
+        include_chronic_indices (Optional[List[int]], optional): Which chronics to include. This is
+            an optimization to speed up loading of the grid in case you don't need all chronics.
             Defaults to all.
 
     Returns:
@@ -103,10 +105,10 @@ def load_grid_grid2op(
     return grid
 
 
-def grid2op_topo_vect_to_grid2elia(
+def import_grid2op_topo_vect(
     topo_vect: np.ndarray, g2o_env: BaseEnv, *, postprocess: bool = True
 ) -> np.ndarray:
-    """Converts a grid2op topo vect to a grid2elia topo vect
+    """Converts a grid2op topo vect to a grid2vec topo vect
 
     Args:
         topo_vect (np.ndarray): The topo vect in grid2op format
@@ -114,7 +116,7 @@ def grid2op_topo_vect_to_grid2elia(
         postprocess (bool, optional): Whether to postprocess the topo vect. Defaults to True.
 
     Returns:
-        np.ndarray: A grid2elia compatible topo_vect. Note that the grid2elia environment must
+        np.ndarray: A grid2vec compatible topo_vect. Note that the grid2vec environment must
             use the same scenario, otherwise this doesn't make sense
     """
     n_line = len(g2o_env.backend._grid.line)
@@ -144,7 +146,7 @@ def grid2op_topo_vect_to_grid2elia(
     return ret_topo_vect
 
 
-def grid2op_action_to_grid2elia(action: BaseAction, env: BaseEnv) -> Action:
+def import_grid2op_action(action: BaseAction, env: BaseEnv) -> Action:
     retval = do_nothing_action(n_envs=1)
 
     n_line_controllable = len(env.backend._grid.line)
@@ -190,7 +192,7 @@ def grid2op_action_to_grid2elia(action: BaseAction, env: BaseEnv) -> Action:
             )
 
         topo_vect = np.expand_dims(
-            grid2op_topo_vect_to_grid2elia(action.set_bus, env, postprocess=False),
+            import_grid2op_topo_vect(action.set_bus, env, postprocess=False),
             axis=0,
         )
         retval = replace(retval, new_topo_vect=ActionSet(topo_vect - 1, topo_vect != 0))
@@ -219,19 +221,76 @@ def grid2op_action_to_grid2elia(action: BaseAction, env: BaseEnv) -> Action:
     return retval
 
 
-def grid2op_action_dump_to_grid2elia(action_dump: str, env: BaseEnv) -> ActionDump:
+def enumerate_all_actions(env: BaseEnv) -> List[dict]:
+    """Enumerates all possible actions for a given grid2op environment.
+
+    Args:
+        env (BaseEnv): The grid2op environment to enumerate actions for.
+
+    Returns:
+        List[dict]: A list of all possible actions in serializable dict format
+    """
+    converter = IdToAct(env.action_space)
+    converter.init_converter(
+        set_line_status=True,
+        change_line_status=False,
+        set_topo_vect=True,
+        change_topo_vect=False,
+        change_bus_vect=False,
+        redispatch=False,
+        curtail=False,
+        storage=False,
+    )
+
+    mapping = []
+    for i in range(converter.n):
+        action = converter.convert_act(i).as_serializable_dict()
+        # Fixes a grid2op issue 527 action space sampling
+        if len(action) == 1 and all([v == {} for v in action.values()]):
+            action = {}
+        mapping.append(action)
+    return mapping
+
+
+def load_grid2op_action_dump_from_file(dump_file: str, env: BaseEnv) -> ActionDump:
+    """Loads a grid2op action dump from file and converts it to grid2vec format
+
+    Args:
+        dump_file (str): The file to load
+        env (BaseEnv): The grid2op environment to convert the dump for
+
+    Returns:
+        ActionDump: A grid2vec action dump
+    """
+    with open(dump_file, "r") as f:
+        dump = json.load(f)
+
+    return import_grid2op_action_dump(dump, env)
+
+
+def all_actions_action_dump(env: BaseEnv) -> ActionDump:
+    """Enumerates all actions for a grid2op environment and makes an action dump from them
+
+    Args:
+        env (BaseEnv): The grid2op environment to enumerate actions for
+
+    Returns:
+        ActionDump: The resulting grid2vec action dump
+    """
+    return import_grid2op_action_dump(enumerate_all_actions(env), env)
+
+
+def import_grid2op_action_dump(dump: List[dict], env: BaseEnv) -> ActionDump:
     """Converts a grid2op action dump to a grid2elia action dump
 
     Args:
-        action_dump (str): The action dump
+        dump (List[dict]): The action dump as a list of dicts, obtained with
+            Action::as_serializable_dict
         env (BaseEnv): The grid2op environment for which the action dump is intended
 
     Returns:
         ActionDump: The converted action dump
     """
-    with open(action_dump, "r") as f:
-        dump = json.load(f)
-
     actions = []
     effect_on_substations = np.zeros((len(dump), env.n_sub), dtype=bool)
     effect_on_lines = np.zeros((len(dump), env.n_line), dtype=bool)
@@ -240,7 +299,7 @@ def grid2op_action_dump_to_grid2elia(action_dump: str, env: BaseEnv) -> ActionDu
         line_impact, sub_impact = g2o_act.get_topological_impact()
         effect_on_substations[idx, :] = sub_impact
         effect_on_lines[idx, :] = line_impact
-        actions.append(grid2op_action_to_grid2elia(g2o_act, env))
+        actions.append(import_grid2op_action(g2o_act, env))
 
     # Fill the exclusion mask so that all actions with effect on the same substations are
     # masked out

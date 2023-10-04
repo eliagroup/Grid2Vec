@@ -13,7 +13,7 @@ from grid2vec.combinator_env import (
 )
 from grid2vec.env import make_env, vector_reset
 from grid2vec.grid import Grid
-from grid2vec.grid2op_compat import grid2op_action_dump_to_grid2elia
+from grid2vec.grid2op_compat import load_grid2op_action_dump_from_file
 
 
 def test_combinator_env_grid2op(
@@ -24,7 +24,7 @@ def test_combinator_env_grid2op(
     env = vector_reset(env)
 
     g2o_env = grid2op.make("l2rpn_case14_sandbox")
-    dump = grid2op_action_dump_to_grid2elia(sandbox_action_dump_file, g2o_env)
+    dump = load_grid2op_action_dump_from_file(sandbox_action_dump_file, g2o_env)
 
     comb_env = make_combinator_env(env, dump, 2)
     assert is_do_nothing_action(comb_env.accumulated_action)

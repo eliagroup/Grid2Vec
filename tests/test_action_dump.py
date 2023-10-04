@@ -151,6 +151,6 @@ def test_convert_action(grid: Grid, action_dump_file: str) -> None:
         grid.n_trafo3w_tap_controllable,
     )
 
-    assert not np.any(action_converted.new_switch_state[0].mask)
-    assert np.any(action_converted.new_switch_state[1].mask)
-    assert np.any(action_converted.new_switch_state[2].mask)
+    assert not np.any(action_converted.new_switch_state[[0]].mask)
+    assert np.any(action_converted.new_switch_state[[1]].mask)
+    assert np.any(action_converted.new_switch_state[[2]].mask)

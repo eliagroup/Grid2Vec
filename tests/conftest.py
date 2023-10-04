@@ -266,7 +266,7 @@ def grid(grid_folder: str) -> Grid:
     return grid
 
 
-@pytest.fixture
+@pytest.fixture(scope="package")
 def net(grid_folder: str) -> pp.pandapowerNet:
     return pp.from_json(os.path.join(grid_folder, "grid.json"))
 

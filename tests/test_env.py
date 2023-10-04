@@ -32,7 +32,7 @@ from grid2vec.env import (
     vector_step,
 )
 from grid2vec.grid import Grid, chronics_current_timestep, load_grid
-from grid2vec.grid2op_compat import grid2op_topo_vect_to_grid2elia, load_grid_grid2op
+from grid2vec.grid2op_compat import import_grid2op_topo_vect, load_grid_grid2op
 from grid2vec.result_spec import set_env_dim
 from grid2vec.solver_interface import action_to_pandapower, compute_obs
 from grid2vec.spaces import get_observation_space
@@ -489,7 +489,7 @@ def test_grid2op_compatible_topology_actions(
     assume(np.all(g2o_obs.line_status))
 
     # Apply the action on grid2elia
-    topo_vect = grid2op_topo_vect_to_grid2elia(g2o_obs.topo_vect, g2o_env)
+    topo_vect = import_grid2op_topo_vect(g2o_obs.topo_vect, g2o_env)
     env = vector_step(env, new_topo_vect=np.expand_dims(topo_vect, 0))
     obs = compute_obs(env)
 

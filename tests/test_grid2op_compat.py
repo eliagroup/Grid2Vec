@@ -10,9 +10,10 @@ from hypothesis import strategies as st
 from grid2vec.actions import pad_out_like
 from grid2vec.grid import Grid, split_substation_affinity
 from grid2vec.grid2op_compat import (
-    grid2op_action_dump_to_grid2elia,
-    grid2op_action_to_grid2elia,
-    grid2op_topo_vect_to_grid2elia,
+    all_actions_action_dump,
+    import_grid2op_action,
+    import_grid2op_topo_vect,
+    load_grid2op_action_dump_from_file,
     load_grid_grid2op,
 )
 
@@ -39,9 +40,9 @@ def test_load_grid_grid2op(sandbox_grid: Grid) -> None:
     assert np.array_equal(grid.topo_vect_max, np.ones(max_idx, dtype=int))
 
 
-def test_grid2op_action_dump_to_grid2elia(sandbox_action_dump_file: str) -> None:
+def test_load_grid2op_action_dump_from_file(sandbox_action_dump_file: str) -> None:
     env = grid2op.make("l2rpn_case14_sandbox")
-    dump = grid2op_action_dump_to_grid2elia(sandbox_action_dump_file, env)
+    dump = load_grid2op_action_dump_from_file(sandbox_action_dump_file, env)
 
     assert len(dump.actions) == len(dump.exclusion_mask)
     # The diagonal is true, i.e. each element excludes itself
@@ -62,20 +63,39 @@ def test_grid2op_action_dump_to_grid2elia(sandbox_action_dump_file: str) -> None
     for idx, act_dict in enumerate(dump_file_contents):
         g2o_act = env.action_space(act_dict)
         elia_act = dump.actions[np.array([idx])]
-        elia_act_ref = pad_out_like(grid2op_action_to_grid2elia(g2o_act, env), elia_act)
+        elia_act_ref = pad_out_like(import_grid2op_action(g2o_act, env), elia_act)
         assert elia_act == elia_act_ref
+
+
+def test_all_actions_action_dump() -> None:
+    env = grid2op.make("l2rpn_case14_sandbox")
+    dump = all_actions_action_dump(env)
+
+    converter = IdToAct(env.action_space)
+    converter.init_converter(
+        set_line_status=True,
+        change_line_status=False,
+        set_topo_vect=True,
+        change_topo_vect=False,
+        change_bus_vect=False,
+        redispatch=False,
+        curtail=False,
+        storage=False,
+    )
+
+    assert len(dump) == converter.n
 
 
 @given(action=st.integers(min_value=0))
 @settings(deadline=None, max_examples=25)
-def test_grid2op_topo_vect_to_grid2elia(sandbox_grid: Grid, action: int) -> None:
+def test_import_grid2op_topo_vect(sandbox_grid: Grid, action: int) -> None:
     grid = sandbox_grid
     params = Parameters()
     params.NO_OVERFLOW_DISCONNECTION = True
     g2o_env = grid2op.make("l2rpn_case14_sandbox", param=params)
     obs = g2o_env.reset()
 
-    topo_vect = grid2op_topo_vect_to_grid2elia(obs.topo_vect, g2o_env)
+    topo_vect = import_grid2op_topo_vect(obs.topo_vect, g2o_env)
     assert np.all(obs.topo_vect == 1)
     assert topo_vect.shape == (grid.n_topo_vect_controllable,)
     assert topo_vect.shape == (grid.len_topo_vect,)
@@ -100,7 +120,7 @@ def test_grid2op_topo_vect_to_grid2elia(sandbox_grid: Grid, action: int) -> None
     assume(not done)
     assume(not np.any(obs.topo_vect == -1))
 
-    topo_vect = grid2op_topo_vect_to_grid2elia(obs.topo_vect, g2o_env)
+    topo_vect = import_grid2op_topo_vect(obs.topo_vect, g2o_env)
 
     bus_assignment = np.squeeze(
         np.take_along_axis(
@@ -132,7 +152,7 @@ def test_grid2op_topo_vect_to_grid2elia(sandbox_grid: Grid, action: int) -> None
 
 @given(action=st.integers(min_value=0))
 @settings(deadline=None, max_examples=25)
-def test_grid2op_action_to_grid2elia_topology(action: int) -> None:
+def test_import_grid2op_action_topology(action: int) -> None:
     grid = load_grid_grid2op(
         "l2rpn_case14_sandbox", include_chronic_indices=list(range(1))
     )
@@ -159,14 +179,14 @@ def test_grid2op_action_to_grid2elia_topology(action: int) -> None:
     assume(not done)
     assume(np.all(obs.line_status))
 
-    elia_act = grid2op_action_to_grid2elia(g2o_act, g2o_env)
+    elia_act = import_grid2op_action(g2o_act, g2o_env)
 
     if not np.any(g2o_act.set_bus != 0):
         assert elia_act.new_topo_vect.shape[1] == 0
     else:
         assert elia_act.new_topo_vect.shape[1] > 0
         expected_topo_vect = np.expand_dims(
-            grid2op_topo_vect_to_grid2elia(obs.topo_vect, g2o_env), 0
+            import_grid2op_topo_vect(obs.topo_vect, g2o_env), 0
         )
 
         assert np.array_equal(
@@ -179,7 +199,7 @@ def test_grid2op_action_to_grid2elia_topology(action: int) -> None:
 
 @given(action=st.integers(min_value=0))
 @settings(deadline=None, max_examples=25)
-def test_grid2op_action_to_grid2elia_set_line_status(action: int) -> None:
+def test_import_grid2op_action_set_line_status(action: int) -> None:
     grid = load_grid_grid2op(
         "l2rpn_case14_sandbox", include_chronic_indices=list(range(1))
     )
@@ -208,7 +228,7 @@ def test_grid2op_action_to_grid2elia_set_line_status(action: int) -> None:
     assume(not done)
     assert np.array_equal(obs.line_status, expected_line_state)
 
-    elia_act = grid2op_action_to_grid2elia(g2o_act, g2o_env)
+    elia_act = import_grid2op_action(g2o_act, g2o_env)
 
     if not np.any(g2o_act.set_line_status != 0):
         assert elia_act.new_line_state.shape[1] == 0

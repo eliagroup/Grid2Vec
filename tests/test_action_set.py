@@ -25,11 +25,13 @@ def test_action_set() -> None:
     assert a.mask.shape == (2, 10)
     assert a.dtype == bool
 
-    assert a[0].shape == (10,)
     assert a[0:1].shape == (1, 10)
     assert a[jnp.array([True, False])].shape == (1, 10)
     assert a[jnp.array([True, False]), :].shape == (1, 10)
     assert a[jnp.array([1, 0])].shape == (2, 10)
+
+    with pytest.raises(AssertionError):
+        a[0]
 
     assert not is_do_nothing_set(a)
 

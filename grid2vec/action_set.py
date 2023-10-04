@@ -30,8 +30,13 @@ class ActionSet:
     def __post_init__(self) -> None:
         assert self.new_state.shape == self.mask.shape
 
-    def __getitem__(self, key: Union[int, slice, np.ndarray]) -> ActionSet:
-        return ActionSet(self.new_state[key], self.mask[key])
+    def __getitem__(self, key: Union[int, slice, jnp.ndarray]) -> ActionSet:
+        retval = ActionSet(self.new_state[key], self.mask[key])
+
+        # If you somehow managed to pass in a single index, we raise
+        chex.assert_rank(retval.new_state, 2)
+        chex.assert_rank(retval.mask, 2)
+        return retval
 
     def __len__(self) -> int:
         return self.new_state.shape[0]
