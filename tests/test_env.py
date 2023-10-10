@@ -1,4 +1,6 @@
 import os
+from collections import Counter
+from itertools import combinations
 
 import chex
 import grid2op
@@ -236,8 +238,8 @@ def test_vector_step_mask(grid: Grid) -> None:
 def test_nminus1_step(grid_folder: str) -> None:
     grid = load_grid(grid_folder, nminus1=True)
     assert grid.nminus1_definition is not None
-    env = make_env(grid, 2)
-    res_spec = set_env_dim(grid.res_spec, 2)
+    env = make_env(grid, 1)
+    res_spec = set_env_dim(grid.res_spec, 1)
     obs_space = get_observation_space(res_spec, False)
 
     assert "line_loading_per_failure" in obs_space.spaces.keys()
@@ -252,24 +254,78 @@ def test_nminus1_step(grid_folder: str) -> None:
     assert obs_space.contains(obs_proc)
     assert "line_loading_per_failure" in obs
     assert obs["line_loading_per_failure"].shape == (
-        2,
+        1,
         len(grid.nminus1_definition),
         grid.n_line,
     )
+
+    if grid.n_line:
+        counter: Counter = Counter()
+        idx_range = list(range(0, obs["line_loading_per_failure"].shape[1]))
+        for idx1, idx2 in combinations(idx_range, 2):
+            if not jnp.array_equal(
+                obs["line_loading_per_failure"][0][idx1],
+                obs["line_loading_per_failure"][0][idx2],
+                equal_nan=True,
+            ):
+                counter["not_all_equal"] += 1
+                break
+            else:
+                counter["all_equal"] += 1
+
+        # Only tolerate a few equal results in the N-1 computation results
+        assert counter["all_equal"] <= obs["line_loading_per_failure"].shape[1] // 10
+
     assert "trafo_loading_per_failure" in obs
     assert obs["trafo_loading_per_failure"].shape == (
-        2,
+        1,
         len(grid.nminus1_definition),
         grid.n_trafo,
     )
+
+    if grid.n_trafo:
+        counter = Counter()
+        idx_range = list(range(0, obs["trafo_loading_per_failure"].shape[1]))
+        for idx1, idx2 in combinations(idx_range, 2):
+            if not jnp.array_equal(
+                obs["trafo_loading_per_failure"][0][idx1],
+                obs["trafo_loading_per_failure"][0][idx2],
+                equal_nan=True,
+            ):
+                counter["not_all_equal"] += 1
+                break
+            else:
+                counter["all_equal"] += 1
+
+        # Only tolerate a few equal results in the N-1 computation results
+        assert counter["all_equal"] <= obs["trafo_loading_per_failure"].shape[1] // 10
+
     assert "trafo3w_loading_per_failure" in obs
     assert obs["trafo3w_loading_per_failure"].shape == (
-        2,
+        1,
         len(grid.nminus1_definition),
         grid.n_trafo3w,
     )
+
+    if grid.n_trafo3w:
+        counter = Counter()
+        idx_range = list(range(0, obs["trafo3w_loading_per_failure"].shape[1]))
+        for idx1, idx2 in combinations(idx_range, 2):
+            if not np.array_equal(
+                obs["trafo3w_loading_per_failure"][0][idx1],
+                obs["trafo3w_loading_per_failure"][0][idx2],
+                equal_nan=True,
+            ):
+                counter["not_all_equal"] += 1
+                break
+            else:
+                counter["all_equal"] += 1
+
+        # Only tolerate a few equal results in the N-1 computation results
+        assert counter["all_equal"] <= obs["trafo3w_loading_per_failure"].shape[1] // 10
+
     assert "nminus1_converged" in obs
-    assert obs["nminus1_converged"].shape == (2, len(grid.nminus1_definition))
+    assert obs["nminus1_converged"].shape == (1, len(grid.nminus1_definition))
     assert np.sum(obs["nminus1_converged"]) > 0
 
 

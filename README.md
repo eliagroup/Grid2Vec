@@ -21,6 +21,11 @@ Other features of grid2op have been deemed irrelevant for our use-case and were 
 
 # Engineering decisions
 
+Our engineering builds on the following assumptions:
+- There will be capable batched load-flow solvers in the near future that leverage the potential of running many, similar computations to gain ca 2 OOM speedup
+- These solvers will benefit from as large batch sizes as possible, the more the merrier
+- These solvers might utilize GPUs
+
 ## GPU compatibility of the environment
 
 The environment is written in jax and is jit compatible, so it can be easily run on a GPU. Currently that doesn't make sense because no GPU solver is integrated, so you won't actually feel a speedup from using grid2vec yet. As soon as a batched and GPU-native solver is integrated, this version should hopefully outperform grid2op.
