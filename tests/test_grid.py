@@ -1,6 +1,5 @@
 import os
 
-import chex
 import grid2op
 import jax.numpy as jnp
 import numpy as np
@@ -27,9 +26,7 @@ def test_chronics_current_timestep(grid_folder: str) -> None:
     timestep = jnp.array([0, 1])
     chronic = jnp.array([0, 1])
 
-    chexified_chronics_current_timestep = chex.chexify(chronics_current_timestep)
-
-    load_p, load_q, prod_p, prod_v = chexified_chronics_current_timestep(
+    load_p, load_q, prod_p, prod_v = chronics_current_timestep(
         timestep, chronic, grid.chronics
     )
 
@@ -39,10 +36,9 @@ def test_chronics_current_timestep(grid_folder: str) -> None:
     assert prod_v.shape == (2, grid.n_gen)
 
     with pytest.raises(Exception):
-        chexified_chronics_current_timestep(
+        chronics_current_timestep(
             timestep + 100000, chronic, grid.chronics, grid.chronics
         )
-        chexified_chronics_current_timestep.wait_checks()
 
 
 def test_topo_vect_to_pandapower() -> None:

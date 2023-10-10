@@ -3,6 +3,7 @@
 from functools import partial
 from typing import Dict, Optional, Tuple
 
+import equinox as eqx
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -331,12 +332,14 @@ def action_to_pandapower(env: VecEnvState) -> Dict[Tuple[str, str], jnp.ndarray]
         bus_assignment = jnp.take_along_axis(
             jnp.transpose(env.grid.substation_affinity), all_topo_vect, axis=0
         )
-        # It would be nicer to throw an exception here, however we can not add a @chex.chexify
-        # as this is not a toplevel function
-        # chex.assert_trees_all_equal(jnp.any(bus_assignment == -1), jnp.array(False))
-        bus_assignment = jnp.where(
-            bus_assignment == -1, env.grid.substation_affinity[:, 0], bus_assignment
+
+        # Make sure no masked elements are taken from the substation affinity
+        bus_assignment = eqx.error_if(
+            bus_assignment,
+            bus_assignment == -1,
+            "You chose an invalid bus assignment, some elements have fewer than the maximum number of busbars available",
         )
+
         retval.update(
             split_substation_affinity(bus_assignment, env.grid.topo_vect_lookup)
         )

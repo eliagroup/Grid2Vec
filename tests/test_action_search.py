@@ -1,4 +1,3 @@
-import chex
 import jax
 import jax.numpy as jnp
 
@@ -18,7 +17,5 @@ def test_action_search(grid: Grid) -> None:
     assert res is not None
     assert len(res) == 10
 
-    res2 = jax.jit(chex.chexify(action_search), static_argnames=("reward_fn",))(
-        env, actions
-    )
+    res2 = jax.jit(action_search, static_argnames=("reward_fn",))(env, actions)
     assert jnp.allclose(res, res2)

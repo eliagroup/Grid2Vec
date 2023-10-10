@@ -342,9 +342,7 @@ def test_truncated(grid: Grid) -> None:
     assert get_truncated(env).item() is True
     assert timesteps_in_current_chronic(env).item() == 0
     with pytest.raises(Exception):
-        vector_step_chexified = chex.chexify(vector_step)
-        env = vector_step_chexified(env)
-        vector_step_chexified.wait_checks()
+        env = vector_step(env)
 
 
 def grid2op_matches_grid2elia(
@@ -677,15 +675,10 @@ def test_timebatch_env(grid: Grid) -> None:
     # Not jnp.all but jnp.any here, as some might have wrapped around further
     assert jnp.any(env_batched.timestep[out_of_bounds] == 0)
 
-    timebatch_env_chexified = chex.chexify(timebatch_env)
     with pytest.raises(Exception):
-        env_batched = timebatch_env_chexified(
-            env, n_batches, end_of_chronic_behaviour="raise"
-        )
-        timebatch_env_chexified.wait_checks()
+        env_batched = timebatch_env(env, n_batches, end_of_chronic_behaviour="raise")
 
-    env_batched = timebatch_env_chexified(env, 2, end_of_chronic_behaviour="raise")
-    timebatch_env_chexified.wait_checks()
+    env_batched = timebatch_env(env, 2, end_of_chronic_behaviour="raise")
     assert env_batched.n_envs == 3 * 2
     assert jnp.array_equal(env_batched.timestep, jnp.array([1, 0, 0, 2, 1, 1]))
 

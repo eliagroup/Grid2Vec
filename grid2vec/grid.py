@@ -4,6 +4,7 @@ import os
 from functools import cached_property
 from typing import Any, Dict, List, Optional, Tuple
 
+import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 import pandapower as pp
@@ -233,8 +234,11 @@ def chronics_current_timestep(
             of shape (n_env, n_load/n_gen)
     """
     # Cannot compute observation for an environment that has ended
-    # chex.assert_trees_all_equal(jnp.any(timestep >= chronics.n_timesteps[chronic_index]), jnp.array(False))
-    timestep = jnp.where(timestep >= chronics.n_timesteps[chronic_index], 0, timestep)
+    timestep = eqx.error_if(
+        timestep,
+        timestep >= chronics.n_timesteps[chronic_index],
+        "you passed the end of a chronic",
+    )
 
     # Compute the beginning indices for each chronic
     beginning_index = jnp.cumsum(

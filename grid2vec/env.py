@@ -1,6 +1,7 @@
 from typing import Callable, Dict, Optional
 
 import chex
+import equinox as eqx
 import jax.numpy as jnp
 import numpy as np
 from jax_dataclasses import Static, pytree_dataclass, replace
@@ -266,8 +267,13 @@ def vector_step(
         which = jnp.ones(env.n_envs, dtype=bool)
     assert which.shape == (env.n_envs,)
 
-    # You forgot to reset the environment after the end of the episode!
-    chex.assert_trees_all_equal(jnp.any(get_truncated(env)), jnp.array(False))
+    set_timestep = env.timestep + which * int(step_time)
+    # If the environment is already past the end of chronics, raise an error
+    set_timestep = eqx.error_if(
+        set_timestep,
+        set_timestep >= env.grid.chronics.n_timesteps[env.chronic],
+        "You forgot to reset the environment after the end of the episode!",
+    )
 
     set_switch_state = env.switch_state
     if new_switch_state is not None:
@@ -295,11 +301,15 @@ def vector_step(
             a_min=env.grid.trafo_tap_min,
             a_max=env.grid.trafo_tap_max,
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_trafo_taps <= env.grid.trafo_tap_max), jnp.array(True)
+        set_trafo_taps = eqx.error_if(
+            set_trafo_taps,
+            set_trafo_taps > env.grid.trafo_tap_max,
+            "Transformer tap assignment too high",
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_trafo_taps >= env.grid.trafo_tap_min), jnp.array(True)
+        set_trafo_taps = eqx.error_if(
+            set_trafo_taps,
+            set_trafo_taps < env.grid.trafo_tap_min,
+            "Transformer tap assignment too low",
         )
 
     set_trafo3w_taps = env.trafo3w_tap_pos
@@ -312,11 +322,15 @@ def vector_step(
             a_min=env.grid.trafo3w_tap_min,
             a_max=env.grid.trafo3w_tap_max,
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_trafo3w_taps <= env.grid.trafo3w_tap_max), jnp.array(True)
+        set_trafo3w_taps = eqx.error_if(
+            set_trafo3w_taps,
+            set_trafo3w_taps > env.grid.trafo3w_tap_max,
+            "3w Transformer tap assignment too high",
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_trafo3w_taps >= env.grid.trafo3w_tap_min), jnp.array(True)
+        set_trafo3w_taps = eqx.error_if(
+            set_trafo3w_taps,
+            set_trafo3w_taps < env.grid.trafo3w_tap_min,
+            "3w Transformer tap assignment too low",
         )
 
     set_topo_vect = env.topo_vect
@@ -327,18 +341,22 @@ def vector_step(
             a_min=env.grid.topo_vect_min,
             a_max=env.grid.topo_vect_max,
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_topo_vect <= env.grid.topo_vect_max), jnp.array(True)
+        set_topo_vect = eqx.error_if(
+            set_topo_vect,
+            set_topo_vect > env.grid.topo_vect_max,
+            "Topology vector assignment too high",
         )
-        chex.assert_trees_all_equal(
-            jnp.all(set_topo_vect >= env.grid.topo_vect_min), jnp.array(True)
+        set_topo_vect = eqx.error_if(
+            set_topo_vect,
+            set_topo_vect < env.grid.topo_vect_min,
+            "Topology vector assignment too low",
         )
 
     # Create a new env to remain immutable
     return VecEnvState(  # type: ignore
         grid=env.grid,
         chronic=env.chronic,
-        timestep=env.timestep + which * int(step_time),
+        timestep=set_timestep,
         switch_state=set_switch_state,
         line_state=set_line_state,
         trafo_state=set_trafo_state,
@@ -361,16 +379,19 @@ def timesteps_in_current_chronic(env: VecEnvState) -> jnp.ndarray:
     return env.grid.chronics.n_timesteps[env.chronic] - env.timestep - 1
 
 
-def get_truncated(env: VecEnvState) -> jnp.ndarray:
+def get_truncated(env: VecEnvState, check_increment: int = 1) -> jnp.ndarray:
     """Returns whether an environment is at the chronic end
 
     Args:
         env (VecEnvState): The vectorized environment state
+        check_increment (int, optional): How far away can the end of the chronics be, i.e. what is
+            the timestep increment you're using for stepping. Defaults to 1, i.e. it will return
+            true on the last timestep and all (invalid) timesteps after that.
 
     Returns:
         np.ndarray[bool]: Shape (n_env) Whether the environment is at the chronic end
     """
-    return env.timestep >= env.grid.chronics.n_timesteps[env.chronic] - 1
+    return env.timestep >= env.grid.chronics.n_timesteps[env.chronic] - check_increment
 
 
 def postprocess_obs(obs: PFCResults, res_spec: ResultSpec) -> Dict[str, np.ndarray]:
@@ -698,9 +719,10 @@ def timebatch_env(
     elif end_of_chronic_behaviour == "ignore":
         pass
     elif end_of_chronic_behaviour == "raise":
-        chex.assert_trees_all_equal(
-            new_timestep < env.grid.chronics.n_timesteps[env.chronic],
-            jnp.ones_like(new_timestep, dtype=bool),
+        new_timestep = eqx.error_if(
+            new_timestep,
+            new_timestep >= env.grid.chronics.n_timesteps[env.chronic],
+            "Timestep is past the end of the chronic, use a different end_of_chronic behaviour or a lower n_timesteps",
         )
     else:
         raise ValueError(f"Unknown end_of_chronic_behaviour {end_of_chronic_behaviour}")

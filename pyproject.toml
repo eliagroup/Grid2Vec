@@ -15,6 +15,7 @@ jax-dataclasses = "^1.5.1"
 gymnasium = "^0.29.1"
 numba = "^0.57.0"
 chex = "^0.1.83"
+equinox = "^0.11.0"
 
 [tool.poetry.group.dev]
 optional = true
