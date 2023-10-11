@@ -99,6 +99,7 @@ def vector_reset(
     env: VecEnvState,
     which: Optional[jnp.ndarray] = None,
     target_chronics: Optional[jnp.ndarray] = None,
+    target_timesteps: Optional[jnp.ndarray] = None,
 ) -> VecEnvState:
     """Resets the vectorized environment state
 
@@ -109,6 +110,8 @@ def vector_reset(
         target_chronics (Optional[np.ndarray[int]], optional): Shape (n_envs Which chronics to
             reset to. Defaults to env.chronic + 1.
             If which is passed, values for which=False will be ignored.
+        target_timesteps (Optional[np.ndarray[int]], optional): Shape (n_envs) Which timesteps to
+            reset to. Defaults to 0.
 
 
     Returns:
@@ -120,11 +123,14 @@ def vector_reset(
     if target_chronics is None:
         target_chronics = env.chronic + 1
 
+    if target_timesteps is None:
+        target_timesteps = jnp.zeros(env.n_envs, dtype=jnp.int32)
+
     assert target_chronics.shape == (env.n_envs,)
 
     target_chronics = jnp.array(target_chronics) % env.grid.n_chronics
 
-    new_timestep = jnp.where(which, 0, env.timestep)
+    new_timestep = jnp.where(which, target_timesteps, env.timestep)
     new_chronic = jnp.where(which, target_chronics, env.chronic)
     new_switch_state = jnp.where(
         which[:, None],

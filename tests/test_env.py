@@ -81,6 +81,12 @@ def test_vector_reset(grid: Grid) -> None:
     env_new = vector_reset(env_new, target_chronics=jnp.array([0, 0]))
     assert env == env_new
 
+    env_new = vector_reset(
+        env, target_chronics=jnp.array([0, 1]), target_timesteps=jnp.array([1, 0])
+    )
+    assert jnp.all(env_new.timestep == jnp.array([1, 0]))
+    assert jnp.all(env_new.chronic == jnp.array([0, 1]))
+
 
 def test_masked_set() -> None:
     mask = jnp.array([[True, False], [False, True]])
