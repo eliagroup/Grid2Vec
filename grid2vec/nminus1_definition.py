@@ -53,6 +53,40 @@ class NMinus1Definition:
         """Iterates over all failures in this definition"""
         return self.iter_failures()
 
+    def __getitem__(self, idx: int) -> Failure:
+        """Returns the idx-th failure in this definition"""
+        n_line_failures = jnp.sum(self.line_mask)
+        n_trafo_failures = jnp.sum(self.trafo_mask)
+        n_trafo3w_failures = jnp.sum(self.trafo3w_mask)
+        n_bus_failures = jnp.sum(self.bus_mask)
+
+        if idx < n_line_failures:
+            return (FailureType.LINE, jnp.where(self.line_mask.flatten())[0][idx])
+        elif idx < n_line_failures + n_trafo_failures:
+            return (
+                FailureType.TRAFO,
+                jnp.where(self.trafo_mask.flatten())[0][idx - n_line_failures],
+            )
+        elif idx < n_line_failures + n_trafo_failures + n_trafo3w_failures:
+            return (
+                FailureType.TRAFO3W,
+                jnp.where(self.trafo3w_mask.flatten())[0][
+                    idx - n_line_failures - n_trafo_failures
+                ],
+            )
+        elif (
+            idx
+            < n_line_failures + n_trafo_failures + n_trafo3w_failures + n_bus_failures
+        ):
+            return (
+                FailureType.BUS,
+                jnp.where(self.bus_mask.flatten())[0][
+                    idx - n_line_failures - n_trafo_failures - n_trafo3w_failures
+                ],
+            )
+        else:
+            raise IndexError(f"Index {idx} out of range [0, {len(self)})")
+
     def iter_failures(self) -> Iterable[Failure]:
         for i, mask in enumerate(
             [self.line_mask, self.trafo_mask, self.trafo3w_mask, self.bus_mask]

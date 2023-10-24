@@ -23,7 +23,9 @@ def test_full_nminus1_definition(net: pp.pandapowerNet):
     trafo_counter = 0
     trafo3w_counter = 0
 
-    for failure_type, failure_idx in definition.iter_failures():
+    for global_failure_idx, (failure_type, failure_idx) in enumerate(
+        definition.iter_failures()
+    ):
         if failure_type == FailureType.LINE:
             assert failure_idx == line_counter
             line_counter += 1
@@ -35,6 +37,9 @@ def test_full_nminus1_definition(net: pp.pandapowerNet):
             trafo3w_counter += 1
         else:
             raise ValueError(f"Unknown failure type {failure_type}")
+
+        assert definition[global_failure_idx] == (failure_type, failure_idx)
+
     assert line_counter == net.line.shape[0]
     assert trafo_counter == net.trafo.shape[0]
     assert trafo3w_counter == net.trafo3w.shape[0]
