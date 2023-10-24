@@ -1,7 +1,8 @@
 from dataclasses import asdict, dataclass
-from typing import Callable, Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import jax
+import jax.numpy as jnp
 import numpy as np
 
 
@@ -14,12 +15,27 @@ class ResultsValue:
     description: str
     pp_res_table: Optional[str] = None
     pp_res_key: Optional[str] = None
-    transformer: Callable[[np.ndarray], np.ndarray] = lambda x: x
     low: Optional[float] = None
     high: Optional[float] = None
+    mask: Optional[np.ndarray] = None
 
 
 ResultSpec = Tuple[ResultsValue, ...]
+
+
+def apply_mask(data: jnp.ndarray, mask: Optional[np.ndarray]) -> jnp.ndarray:
+    """Applies a mask to data
+
+    Args:
+        data (jnp.ndarray): The data to mask
+        mask (Optional[np.ndarray]): The mask. If None, no masking is applied
+
+    Returns:
+        jnp.ndarray: The masked data
+    """
+    if mask is None:
+        return data
+    return data[mask]
 
 
 def find_spec(specs: ResultSpec, key: str) -> Optional[ResultsValue]:

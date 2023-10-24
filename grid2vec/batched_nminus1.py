@@ -12,6 +12,7 @@ from grid2vec.nminus1_definition import (
 )
 from grid2vec.result_spec import (
     ResultSpec,
+    apply_mask,
     describe_nminus1,
     describe_results,
     find_spec,
@@ -176,33 +177,32 @@ def batched_n_minus_1(
     # Add results to base results
     spec = find_spec(res_spec, "line_loading_per_failure")
     if spec is not None:
-        base_res["line_loading_per_failure"] = spec.transformer(
-            line_loading_per_failure.astype(spec.dtype)
+        base_res["line_loading_per_failure"] = apply_mask(
+            line_loading_per_failure.astype(spec.dtype), spec.mask
         )
     spec = find_spec(res_spec, "line_loading_grid2op_per_failure")
     if spec is not None:
-        base_res["line_loading_grid2op_per_failure"] = spec.transformer(
-            line_loading_grid2op_per_failure.astype(spec.dtype)
+        base_res["line_loading_grid2op_per_failure"] = apply_mask(
+            line_loading_grid2op_per_failure.astype(spec.dtype), spec.mask
         )
     spec = find_spec(res_spec, "trafo_loading_per_failure")
     if spec is not None:
-        base_res["trafo_loading_per_failure"] = spec.transformer(
-            trafo_loading_per_failure.astype(spec.dtype)
+        base_res["trafo_loading_per_failure"] = apply_mask(
+            trafo_loading_per_failure.astype(spec.dtype), spec.mask
         )
     spec = find_spec(res_spec, "trafo_loading_grid2op_per_failure")
     if spec is not None:
-        base_res["trafo_loading_grid2op_per_failure"] = spec.transformer(
-            trafo_loading_grid2op_per_failure.astype(spec.dtype)
+        base_res["trafo_loading_grid2op_per_failure"] = apply_mask(
+            trafo_loading_grid2op_per_failure.astype(spec.dtype), spec.mask
         )
     spec = find_spec(res_spec, "trafo3w_loading_per_failure")
     if spec is not None:
-        base_res["trafo3w_loading_per_failure"] = spec.transformer(
-            trafo3w_loading_per_failure.astype(spec.dtype)
+        base_res["trafo3w_loading_per_failure"] = apply_mask(
+            trafo3w_loading_per_failure.astype(spec.dtype), spec.mask
         )
     spec = find_spec(res_spec, "nminus1_converged")
     if spec is not None:
-        base_res["nminus1_converged"] = spec.transformer(converged)
-
+        base_res["nminus1_converged"] = apply_mask(converged, spec.mask)
     base_res = {k: freeze_array(v) for k, v in base_res.items()}
 
     return base_res

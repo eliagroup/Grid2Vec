@@ -39,8 +39,6 @@ def test_result_specs(net: pp.pandapowerNet) -> None:
         # All transformations work, correct shapes
         res = table[spec.pp_res_key].values
         assert res.shape == spec.shape[1:]
-        transformed = spec.transformer(res)
-        assert transformed.shape == res.shape
 
     nminus1_spec = describe_nminus1(
         n_envs=10,
