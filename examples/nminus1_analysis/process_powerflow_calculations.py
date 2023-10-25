@@ -121,7 +121,7 @@ def main(data_path: Path, nminus1: bool, dc: bool, n_procs: int, crit_threshold:
         crit_threshold (float): threshold above which a loading_value is considered an overload
 
     Writes the completed file to data_path/powerflow_analysis/{path_suffix}/overloads.csv
-    """    
+    """
     grid = load_grid(data_path, nminus1=nminus1, dc=dc)
     path_suffix = (
         "nminus1_dc"
