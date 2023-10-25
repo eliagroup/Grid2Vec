@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 import pandapower as pp
 
-from grid2vec.result_spec import ResultSpec, describe_results, find_spec
+from grid2vec.result_spec import ResultSpec, apply_mask, describe_results, find_spec
 from grid2vec.util import freeze_array
 
 PFCResults = Dict[str, jnp.ndarray]
@@ -42,7 +42,7 @@ def extract_env_results(
             continue
         table = getattr(net, spec.pp_res_table)
         res = table[spec.pp_res_key].values
-        results[spec.key][env] = spec.transformer(res)
+        results[spec.key][env] = apply_mask(res, spec.mask)
     return results
 
 
@@ -113,13 +113,14 @@ def batched_pfc(
             # Extract grid2op compatible loadings
             spec = find_spec(res_spec, "loading_line_grid2op")
             if spec is not None:
-                res_dict[spec.key][i] = spec.transformer(
-                    net_copy.res_line.i_from_ka / net_copy.line.max_i_ka
+                res_dict[spec.key][i] = apply_mask(
+                    net_copy.res_line.i_from_ka / net_copy.line.max_i_ka, spec.mask
                 )
             spec = find_spec(res_spec, "loading_trafo_grid2op")
             if spec is not None and "grid2op_load_limit" in net_copy.trafo:
-                res_dict[spec.key][i] = spec.transformer(
-                    net_copy.res_trafo.i_hv_ka / net_copy.trafo.grid2op_load_limit
+                res_dict[spec.key][i] = apply_mask(
+                    net_copy.res_trafo.i_hv_ka / net_copy.trafo.grid2op_load_limit,
+                    spec.mask,
                 )
 
         except Exception:
@@ -128,7 +129,7 @@ def batched_pfc(
     # Add converged flag
     spec = find_spec(res_spec, "converged")
     if spec is not None:
-        res_dict[spec.key] = spec.transformer(converged)
+        res_dict[spec.key] = apply_mask(converged, spec.mask)
 
     # Freeze res dict
     res_dict = {k: freeze_array(v) for k, v in res_dict.items()}

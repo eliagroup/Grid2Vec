@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import grid2op
 import jax.numpy as jnp
@@ -8,6 +9,7 @@ import pytest
 from grid2op.MakeEnv.PathUtils import DEFAULT_PATH_DATA
 
 from grid2vec.grid import (
+    Grid,
     chronics_current_timestep,
     empty_substation_affinity,
     load_chronics,
@@ -286,3 +288,56 @@ def test_load_grid2op() -> None:
     assert grid.chronics.prod_v.shape == (n_timesteps, grid.n_gen)
 
     assert grid.nminus1_definition is None
+
+
+def test_pickle(grid: Grid) -> None:
+    pickled = pickle.dumps(grid)
+    unpickled: Grid = pickle.loads(pickled)
+
+    # This is unintuitive - we implemented the equality operator as an identity check
+    # hence this is expected to fail.
+    assert grid != unpickled
+
+    assert grid.topo_vect_lookup == unpickled.topo_vect_lookup
+    assert grid.chronics == unpickled.chronics
+    assert jnp.array_equal(grid.switch_controllable, unpickled.switch_controllable)
+    assert jnp.array_equal(grid.line_controllable, unpickled.line_controllable)
+    assert jnp.array_equal(grid.trafo_controllable, unpickled.trafo_controllable)
+    assert jnp.array_equal(
+        grid.trafo_tap_controllable, unpickled.trafo_tap_controllable
+    )
+    assert jnp.array_equal(
+        grid.trafo3w_tap_controllable, unpickled.trafo3w_tap_controllable
+    )
+
+    assert jnp.array_equal(grid.switch_default, unpickled.switch_default)
+    assert jnp.array_equal(grid.line_default, unpickled.line_default)
+    assert jnp.array_equal(grid.trafo_default, unpickled.trafo_default)
+    assert jnp.array_equal(grid.trafo_tap_default, unpickled.trafo_tap_default)
+    assert jnp.array_equal(grid.trafo_tap_min, unpickled.trafo_tap_min)
+    assert jnp.array_equal(grid.trafo_tap_max, unpickled.trafo_tap_max)
+    assert jnp.array_equal(grid.trafo3w_tap_default, unpickled.trafo3w_tap_default)
+    assert jnp.array_equal(grid.trafo3w_tap_min, unpickled.trafo3w_tap_min)
+    assert jnp.array_equal(grid.trafo3w_tap_max, unpickled.trafo3w_tap_max)
+    assert jnp.array_equal(grid.topo_vect_default, unpickled.topo_vect_default)
+
+    assert jnp.array_equal(grid.substation_affinity, unpickled.substation_affinity)
+
+    assert jnp.array_equal(
+        grid.line_capacity_masked_for_reward, unpickled.line_capacity_masked_for_reward
+    )
+    assert jnp.array_equal(
+        grid.trafo_capacity_masked_for_reward,
+        unpickled.trafo_capacity_masked_for_reward,
+    )
+    assert jnp.array_equal(
+        grid.trafo3w_capacity_masked_for_reward,
+        unpickled.trafo3w_capacity_masked_for_reward,
+    )
+
+    assert grid.nminus1_definition == unpickled.nminus1_definition
+    assert grid.default_crit_threshold == unpickled.default_crit_threshold
+    assert grid.dc == unpickled.dc
+    assert grid.timestep_minutes == unpickled.timestep_minutes
+
+    assert grid.res_spec == unpickled.res_spec

@@ -34,6 +34,19 @@ class Chronics:
     prod_v: jnp.ndarray  # [float] (n_timesteps_total, n_load) - Generation voltage setpoints
     n_timesteps: jnp.ndarray  # [int] (n_chronics) - Number of timesteps in each chronic
 
+    def __eq__(self, other: Any):
+        """The eq function compares all arrays"""
+        if not isinstance(other, Chronics):
+            return False
+
+        return (
+            jnp.array_equal(self.load_p, other.load_p)
+            and jnp.array_equal(self.load_q, other.load_q)
+            and jnp.array_equal(self.prod_p, other.prod_p)
+            and jnp.array_equal(self.prod_v, other.prod_v)
+            and jnp.array_equal(self.n_timesteps, other.n_timesteps)
+        )
+
 
 @pytree_dataclass
 class Grid:
