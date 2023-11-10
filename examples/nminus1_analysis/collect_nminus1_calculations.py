@@ -28,7 +28,7 @@ def filter_loading_per_failure_to_reward_elements(
 
     Returns:
         np.ndarray: filtered array with shape (n_envs, n_reward_elements, n_reward_elements)
-    """    
+    """
     return loading_per_failure[:, :, reward_elements]
 
 
@@ -41,7 +41,7 @@ def run_nminus1(grid: Grid, steps: Iterable[int], destination_path: Path) -> Non
         steps (Iterable[int]): List-like object of integer timesteps to run the powerflow analysis for
         destination_path (Path): path to save the results to
     """
-    print(f"Running nminus1 from {steps[0]} to {steps[-1]}")
+    print(f"Process running nminus1 for steps {steps[0]} to {steps[-1]}")
     env = make_env(grid, 1)
     env = vector_reset(env)
     env = vector_step(env, step_time=int(steps[0]))
@@ -58,19 +58,27 @@ def run_nminus1(grid: Grid, steps: Iterable[int], destination_path: Path) -> Non
         obs = compute_obs(env)
         env = vector_step(env)
         obs_smaller = {key: obs[key] for key in keys_to_keep}
-        obs_smaller["line_loading_per_failure"] = filter_loading_per_failure_to_reward_elements(
-            obs_smaller["line_loading_per_failure"], grid.line_for_reward)
-        obs_smaller["trafo_loading_per_failure"] = filter_loading_per_failure_to_reward_elements(
-            obs_smaller["trafo_loading_per_failure"], grid.trafo_for_reward)
-        obs_smaller["trafo3w_loading_per_failure"] = filter_loading_per_failure_to_reward_elements(
-            obs_smaller["trafo3w_loading_per_failure"], grid.trafo3w_for_reward)
+        obs_smaller[
+            "line_loading_per_failure"
+        ] = filter_loading_per_failure_to_reward_elements(
+            obs_smaller["line_loading_per_failure"], grid.line_for_reward
+        )
+        obs_smaller[
+            "trafo_loading_per_failure"
+        ] = filter_loading_per_failure_to_reward_elements(
+            obs_smaller["trafo_loading_per_failure"], grid.trafo_for_reward
+        )
+        obs_smaller[
+            "trafo3w_loading_per_failure"
+        ] = filter_loading_per_failure_to_reward_elements(
+            obs_smaller["trafo3w_loading_per_failure"], grid.trafo3w_for_reward
+        )
 
         np.save(destination_path / f"{int(step)}.npy", obs_smaller)
 
 
 def main(
     data_path: Path,
-    nminus1: bool = True,
     dc: bool = True,
     n_procs: int = None,
     surpress_print: bool = False,
@@ -90,18 +98,10 @@ def main(
     """
     if n_procs is None:
         n_procs = cpu_count()
-    grid = load_grid(data_path, nminus1=nminus1, dc=dc)
+    grid = load_grid(data_path, nminus1=True, dc=dc)
 
     destination_path = data_path / "powerflow_analysis"
-    path_suffix = (
-        "nminus1_dc"
-        if nminus1 and dc
-        else "nminus1_ac"
-        if nminus1
-        else "n_dc"
-        if dc
-        else "n_ac"
-    )
+    path_suffix = "nminus1_dc" if dc else "nminus1_ac"
     destination_path = destination_path / path_suffix
 
     if not destination_path.exists():
@@ -110,7 +110,7 @@ def main(
     # check for existing completed files and exclude them from processing
     list_existing_files = list(destination_path.glob("*.npy"))
     already_processed = [int(file.stem) for file in list_existing_files]
-    list_steps = np.arange(grid.chronics.n_timesteps)[:10]
+    list_steps = np.arange(grid.chronics.n_timesteps)
     list_steps = np.setdiff1d(list_steps, already_processed)
 
     # give each process a list of timesteps
@@ -139,13 +139,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=Path)
     parser.add_argument("--n_procs", type=int, default=None)
-    parser.add_argument("--nminus1", action="store_true")
     parser.add_argument("--dc", action="store_true")
     parser.add_argument("--surpress_print", action="store_true")
     args = parser.parse_args()
     main(
         data_path=args.data_path,
-        nminus1=args.nminus1,
         dc=args.dc,
         n_procs=args.n_procs,
         surpress_print=args.surpress_print,

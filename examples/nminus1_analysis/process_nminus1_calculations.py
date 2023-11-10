@@ -68,29 +68,22 @@ def process_nminus1_observation_file(
         {"grid_id": failure_grid_indices, "failure_asset_type": failure_asset_types}
     )
 
-    # get indices of overloads
-    line_overload_indices = np.argwhere(line_loading_per_failure >= crit_threshold)
-    trafo_overload_indices = np.argwhere(trafo_loading_per_failure >= crit_threshold)
-    trafo3w_overload_indices = np.argwhere(
-        trafo3w_loading_per_failure >= crit_threshold
-    )
-
     results = []
     for (
-        loading_per_failure_array,
-        overload_array,
         element_type,
+        loading_per_failure_array,
         grid_index_mapping,
     ) in zip(
+        ["line", "trafo", "trafo3w"],
         [
             line_loading_per_failure,
             trafo_loading_per_failure,
             trafo3w_loading_per_failure,
         ],
-        [line_overload_indices, trafo_overload_indices, trafo3w_overload_indices],
-        ["line", "trafo", "trafo3w"],
         [grid_line_mapping, grid_trafo_mapping, grid_trafo3w_mapping],
     ):
+        # get indices of overloads
+        overload_array = np.argwhere(loading_per_failure_array >= crit_threshold)
         for overload in overload_array:
             return_dict = {
                 "vec_env": overload[0],
@@ -123,15 +116,7 @@ def main(data_path: Path, nminus1: bool, dc: bool, n_procs: int, crit_threshold:
     Writes the completed file to data_path/powerflow_analysis/{path_suffix}/overloads.csv
     """
     grid = load_grid(data_path, nminus1=nminus1, dc=dc)
-    path_suffix = (
-        "nminus1_dc"
-        if nminus1 and dc
-        else "nminus1_ac"
-        if nminus1
-        else "n_dc"
-        if dc
-        else "n_ac"
-    )
+    path_suffix = "nminus1_dc" if dc else "nminus1_ac"
     analysis_path = data_path / "powerflow_analysis" / path_suffix
     list_files = list(analysis_path.glob("*.npy"))
     if not len(list_files):
@@ -164,7 +149,6 @@ def main(data_path: Path, nminus1: bool, dc: bool, n_procs: int, crit_threshold:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data_path", type=Path)  # path to grid data folder
-    parser.add_argument("--nminus1", action="store_true")
     parser.add_argument("--dc", action="store_true")
     parser.add_argument("--n_procs", type=int, default=cpu_count())
     parser.add_argument("--crit_threshold", type=float, default=90.0)
@@ -172,7 +156,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     main(
         data_path=args.data_path,
-        nminus1=args.nminus1,
         dc=args.dc,
         n_procs=args.n_procs,
         crit_threshold=args.crit_threshold,
