@@ -1,8 +1,9 @@
 [tool.poetry]
 name = "grid2vec"
 version = "0.1.0"
-description = "GitHub Codespaces template"
-authors = ["AI Center of Excellence"]
+description = "A vectorized grid2op-like environment for reinforcement learning for grid control"
+authors = ["Elia Group"]
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "3.11.*"
