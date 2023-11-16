@@ -3,11 +3,11 @@
 grid2vec is a rewrite of grid2op that aims to address some of the weaknesses we encountered while using grid2op.
 
 Most notably, grid2vec is designed to
-- Work with multiple busbars per substation, with a custom substation affinity file
 - Compute n-1 loadflows natively
 - Be built around the (future) prospect of a batched solver which can compute a large batch of powerflows at the same time. Because of this, offer a vectorized interface
 - Be built around the (future) prospect of running the entire environment loop on GPU.
 - Offer switch and phase-shift transformer actions.
+- Work with multiple busbars per substation, with a custom substation affinity file
 - Offer extensive masking capabilities, in case the pandapower grid holds a lot of elements that are irrelevant
 
 Other features of grid2op have been deemed irrelevant for our use-case and were not implemented:
@@ -17,7 +17,7 @@ Other features of grid2op have been deemed irrelevant for our use-case and were 
 - Disconnect on overload (in the real world, unmitigated overloads will be subject to redispatch, minimize the amount of overloads)
 - Alarms (It's clear from the loadflow results whether an action is a good one)
 - Forecasts (We will only get the forecast data, no ground truth, so train directly on forecasts)
-- ...
+
 
 # Engineering decisions
 
@@ -32,7 +32,7 @@ The environment is written in jax and is jit compatible, so it can be easily run
 
 ## Grid env split
 
-We decided to implement a split of the environment into a read-only portion that is only loaded once and stays constant throughout the entire optimization (grid) and a part that is changing in every optimization step (env). The main reason for this is that jax benefits from static variables and that the chronics can be held in ram in a central place. The static grid dataclass can be held in shared memory or be loaded before a fork in multi-process environments. In a vectorized environment, all instances can access the same central chronics data.
+We decided to implement a split of the environment into a read-only portion that is only loaded once and stays constant throughout the entire optimization (grid) and a part that is changing in every optimization step (env). The main reason for this is that jax benefits from static variables and that the chronics can be held in RAM in a central place. The static grid dataclass can be held in shared memory or be loaded before a fork in multi-process environments. In a vectorized environment, all instances can access the same central chronics data.
 
 It turns out that we don't have a native GPU solver yet, so we can't tap into the potential performance benefit of the grid-env split. Currently it's actually worse because we have to load all chronics at startup and you need enough RAM on your machine to hold them all.
 
@@ -104,3 +104,7 @@ There are multiple masks,
 These allow to have granular control over which parts of the net should be part of the action space. As we run our PoC on data of the entire european net but only control the german section of it, this is necessary.
 
 The n-1 masks are stored in an nminus1_definition as defined in nminus1_definition.py. The action space masks are mainly processed in env.py but loaded along the grid. The reward masks are processed in env.py but loaded along the grid.
+
+# Disclaimer
+
+We're glad to receive your contributions and feedback. This code was made in a collaboration between [Elia Group](https://github.com/eliagroup) and [InstaDeep](https://github.com/instadeepai).
