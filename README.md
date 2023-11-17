@@ -107,4 +107,4 @@ The n-1 masks are stored in an nminus1_definition as defined in nminus1_definiti
 
 # Disclaimer
 
-We're glad to receive your contributions and feedback. This code was made in a collaboration between [Elia](https://github.com/eliagroup) and [InstaDeep](https://github.com/instadeepai).
+We're glad to receive your contributions and feedback. This code was made in a collaboration between [Elia Group](https://github.com/eliagroup) and [InstaDeep](https://github.com/instadeepai).
