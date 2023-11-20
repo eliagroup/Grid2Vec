@@ -1,18 +1,17 @@
 import argparse
 import warnings
 from functools import partial
-from typing import List, Dict
-from pathlib import Path
 from itertools import chain
 from multiprocessing import Pool, cpu_count
 from multiprocessing.pool import AsyncResult
+from pathlib import Path
+from typing import Dict, Iterable, List
 
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from grid2vec.grid import Grid, load_grid
-
+from grid2vec.grid import Grid, NMinus1Definition, load_grid
 
 warnings.simplefilter("ignore", category=FutureWarning)
 
@@ -47,22 +46,27 @@ def process_nminus1_observation_file(
     grid_trafo3w_index = grid.net.trafo3w.loc[pd.Series(grid.trafo3w_for_reward)].index
     grid_trafo3w_mapping = {i: t for i, t in enumerate(grid_trafo3w_index)}
 
+    if grid.nminus1_definition is not None:
+        nminus1_definition: NMinus1Definition = grid.nminus1_definition
+    else:
+        raise ValueError(
+            "No nminus1 definition found. Please run the analysis with nminus1=True"
+        )
+
     # get indices of failures
     failure_grid_indices = (
-        grid.net.line.loc[pd.Series(grid.nminus1_definition.line_mask)].index.tolist()
-        + grid.net.trafo.loc[
-            pd.Series(grid.nminus1_definition.trafo_mask)
-        ].index.tolist()
+        grid.net.line.loc[pd.Series(nminus1_definition.line_mask)].index.tolist()
+        + grid.net.trafo.loc[pd.Series(nminus1_definition.trafo_mask)].index.tolist()
         + grid.net.trafo3w.loc[
-            pd.Series(grid.nminus1_definition.trafo3w_mask)
+            pd.Series(nminus1_definition.trafo3w_mask)
         ].index.tolist()
     )
 
     # put asset type according to which position in the array it is
     failure_asset_types = (
-        ["line"] * int(grid.nminus1_definition.line_mask.sum())
-        + ["trafo"] * int(grid.nminus1_definition.trafo_mask.sum())
-        + ["trafo3w"] * int(grid.nminus1_definition.trafo3w_mask.sum())
+        ["line"] * int(nminus1_definition.line_mask.sum())
+        + ["trafo"] * int(nminus1_definition.trafo_mask.sum())
+        + ["trafo3w"] * int(nminus1_definition.trafo3w_mask.sum())
     )
     df_failure_mapping = pd.DataFrame(
         {"grid_id": failure_grid_indices, "failure_asset_type": failure_asset_types}
@@ -123,7 +127,7 @@ def main(data_path: Path, nminus1: bool, dc: bool, n_procs: int, crit_threshold:
         raise ValueError(
             f"No analysis files found in {analysis_path}. Try running collect_powerflow_calculations.py first."
         )
-    results: List[AsyncResult] = []
+    results: Iterable[AsyncResult] = []
     if nminus1:
         with Pool(n_procs) as p:
             results = list(
@@ -141,7 +145,7 @@ def main(data_path: Path, nminus1: bool, dc: bool, n_procs: int, crit_threshold:
     else:
         raise NotImplementedError("Not implemented yet")
     # flatten list of lists
-    results = list(chain(*results))
+    results = list(chain(results))
     df_results = pd.DataFrame(results)
     df_results.to_csv(analysis_path / "overloads.csv", index=False)
 

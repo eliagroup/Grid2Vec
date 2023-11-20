@@ -1,17 +1,17 @@
+import argparse
+import contextlib
+import os
+import warnings
 from multiprocessing import Pool, cpu_count
 from multiprocessing.pool import AsyncResult
-from typing import Iterable, List
-import argparse
 from pathlib import Path
-import warnings
+from typing import List, Optional
 
 import numpy as np
 
-from grid2vec.env import make_env, vector_step, vector_reset
-from grid2vec.solver_interface import compute_obs
+from grid2vec.env import make_env, vector_reset, vector_step
 from grid2vec.grid import Grid, load_grid
-import os
-import contextlib
+from grid2vec.solver_interface import compute_obs
 
 warnings.simplefilter("ignore", category=FutureWarning)
 
@@ -32,7 +32,7 @@ def filter_loading_per_failure_to_reward_elements(
     return loading_per_failure[:, :, reward_elements]
 
 
-def run_nminus1(grid: Grid, steps: Iterable[int], destination_path: Path) -> None:
+def run_nminus1(grid: Grid, steps: List[int], destination_path: Path) -> None:
     """Runs a powerflow analysis for a given grid and a given set of timesteps. Each
     step is saved as a numpy array in the destination path.
 
@@ -80,7 +80,7 @@ def run_nminus1(grid: Grid, steps: Iterable[int], destination_path: Path) -> Non
 def main(
     data_path: Path,
     dc: bool = True,
-    n_procs: int = None,
+    n_procs: Optional[int] = None,
     surpress_print: bool = False,
 ):
     """This function loads a grid from a given data directory and runs a powerflow analysis
@@ -133,7 +133,6 @@ def main(
         else:
             [async_result.get() for async_result in async_results_list]
         print("Finished all processes")
-
 
 
 if __name__ == "__main__":
