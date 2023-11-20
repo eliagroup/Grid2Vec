@@ -160,4 +160,3 @@ if __name__ == "__main__":
         n_procs=args.n_procs,
         crit_threshold=args.crit_threshold,
     )
-

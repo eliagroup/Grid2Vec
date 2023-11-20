@@ -129,9 +129,9 @@ def main(
             )
         if surpress_print:
             with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
-                results = [async_result.get() for async_result in async_results_list]
+                [async_result.get() for async_result in async_results_list]
         else:
-            results = [async_result.get() for async_result in async_results_list]
+            [async_result.get() for async_result in async_results_list]
         print("Finished all processes")
 
 
