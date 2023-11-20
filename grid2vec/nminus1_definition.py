@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from enum import Enum
 from functools import cached_property
+from pathlib import Path
 from typing import Iterable, Tuple
 
 import jax.numpy as jnp
@@ -96,7 +97,9 @@ class NMinus1Definition:
                     yield (FailureType(i), j)
 
 
-def load_nminus1_definition(net: pp.pandapowerNet, folder: str) -> NMinus1Definition:
+def load_nminus1_definition(
+    net: pp.pandapowerNet, folder: str | Path
+) -> NMinus1Definition:
     """Loads an n-1 definition from a folder
 
     Uses empty masks in case of missing files
