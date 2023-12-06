@@ -63,7 +63,7 @@ def run_nminus1(
 
     if grid.nminus1_definition is None:
         raise ValueError(
-            "No nminus1 definition found. Please re-run the analysis with nminus1=True"
+            "No nminus1 definition found. Please re-create the grid with a nminus1 definition."
         )
     else:
         nminus1_definition: NMinus1Definition = grid.nminus1_definition
