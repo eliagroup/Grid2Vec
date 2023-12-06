@@ -2,6 +2,7 @@ import bz2
 import datetime
 import os
 from functools import cached_property
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import equinox as eqx
@@ -486,7 +487,7 @@ def load_substation_affinity(filename: str, net: pp.pandapowerNet) -> jnp.ndarra
     return substation_affinity
 
 
-def load_grid_info(folder: str) -> Tuple[float, int]:
+def load_grid_info(folder: str | Path) -> Tuple[float, int]:
     """Loads the default critical threshold and timestep length from a folder
 
     Args:
@@ -509,7 +510,7 @@ def load_grid_info(folder: str) -> Tuple[float, int]:
 
 
 def load_grid(
-    folder: str,
+    folder: str | Path,
     *,
     include_chronic_indices: Optional[List[int]] = None,
     nminus1: bool = False,
